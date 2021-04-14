@@ -194,4 +194,4 @@ def RunTrainingAndInference():
     BuildFinalModel()
 
 #RunTrainingAndInference()
-cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), "ProfilerOutput.txt"))
+cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))

@@ -886,4 +886,4 @@ def RunTrainingAndInference():
     rfe, model, user_answers_df, content_answers_df = TrainModels()
     RunInference(rfe, model, user_answers_df, content_answers_df)
 
-cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), "ProfilerOutput.txt"))
+cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))

@@ -2596,4 +2596,4 @@ def RunTrainingAndInference():
     Model1_Water_Spring_Lupa()
     Model1_Water_Spring_Madonna_di_Canneto()
 
-cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), "ProfilerOutput.txt"))
+cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
