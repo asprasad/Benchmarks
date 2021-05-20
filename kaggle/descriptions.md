@@ -23,14 +23,29 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 ## PUBG
 ### Functionality
 * **Read Data:** Just reads the data from the test and train CSV files. Performs some basic filtering. Interestingly, there is a memory reduction function that casts various columns to specific data types. Apparently, the process uses too much memory without this. (TODO is this potentially an opportunity for optimizations like tiling?)
-* **Feature Construction:** After reading the CSVs, the algorithm constructs a set of additional features by combining columns in various ways. It roughly has two parts
+* **Feature Augmentation:** After reading the CSVs, the algorithm constructs a set of additional features by combining columns in various ways. It roughly has two parts
   * First, a new set of features is constructed by arithmetically combining columns from the input data.
   * Input rows are grouped based on some keys and each group is reduced in different ways (min, max, mean, std etc.). Then the aggregates of each group are appended to each row of the group (using a join).
   * For each different aggregation, the grouping is being re-run. Also, the join is a major bottleneck. If we were to join the aggregate tables first and then perform a single join with the input table, that would be much faster than repeatedly joining the aggregates with the input data.
 * **Predictive Models:** There is a single predictive model -- a gradient boosted tree ensemble. The single model is trained with all the augmented training data and then used to predict the test inputs.
 ### Profiling
 * **Read Data:** The read + feature generation takes about 9% of the total time. This time is dominated by the joins (~7%).
- * See above for some possible optimizations.
+  * See above for some possible optimizations.
 * **Training:** The training is the biggest bottleneck. Takes about 80% of the time. Almost all of this is spent in the lightgbm.train (~78%).
- *  LightGBM.train seems to have an input called "num_threads". Is this some kind of parallelization?
+  * LightGBM.train seems to have an input called "num_threads". Is this some kind of parallelization?
 *  **Inference:** Takes about 10.5% of the total time of which about 7.5% is the actual inference (model.predict) and 3% is reading the test data and adding the derived features.
+
+## Santander
+### Functionality
+* **Read Data and Feature Augmentation:** 
+  * Read the CSV into a dataframe. Also does some basic filtering based on whether some feature values are unique (not sure how this works since the results seem to be discarded). 
+  * There are 200 input features. 200 new features, one for each input feature, are computed based on the histogram of the corresponding input feature. (These are the magic features).
+* **Predictive Models:** The application compares two prediction mechanisms -- 
+  * In the first method, the magic features are used. 200 different lightgbm models, one for each input feature magic feature pair, to predict the target value are constructed. The predictions of these models are then combined to get a final prediction. They are combined using logistic regression. 
+  * The second method is the same as above except that it only uses the input features and not the magic features.
+### Profiling
+I only profiled the application for model construction and inference for the first 5 features. Therefore, the data read and feature augmentation times should be even more insignificant than what is listed below (it says 5% below, but I would expect something like 0.1% when the whole application is run).
+* **Read Data and Feature Augmentation:** 
+  * Reading and filtering take about 5% of the total time. Reading alone is about 3.5% and the result is almost completely the unique value computation.
+  * 
+
