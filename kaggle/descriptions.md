@@ -24,8 +24,8 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 ### Functionality
 * **Read Data:** Just reads the data from the test and train CSV files. Performs some basic filtering. Interestingly, there is a memory reduction function that casts various columns to specific data types. Apparently, the process uses too much memory without this. (TODO is this potentially an opportunity for optimizations like tiling?)
 * **Feature Construction:** After reading the CSVs, the algorithm constructs a set of additional features by combining columns in various ways. It roughly has two parts
- * First, a new set of features is constructed by arithmetically combining columns from the input data.
- * Input rows are grouped based on some keys and each group is reduced in different ways (min, max, mean, std etc.). Then the aggregates of each group are appended to each row of the group (using a join).
+  * First, a new set of features is constructed by arithmetically combining columns from the input data.
+  * Input rows are grouped based on some keys and each group is reduced in different ways (min, max, mean, std etc.). Then the aggregates of each group are appended to each row of the group (using a join).
   * For each different aggregation, the grouping is being re-run. Also, the join is a major bottleneck. If we were to join the aggregate tables first and then perform a single join with the input table, that would be much faster than repeatedly joining the aggregates with the input data.
 * **Predictive Models:** There is a single predictive model -- a gradient boosted tree ensemble. The single model is trained with all the augmented training data and then used to predict the test inputs.
 ### Profiling
