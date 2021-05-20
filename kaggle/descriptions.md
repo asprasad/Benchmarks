@@ -19,6 +19,7 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 * **Filtering And Other Pandas Stuff:** Takes about 23% of the time. There are two calls to two different __getitem__ functions -- pandas/core/frame.py and pandas/core/indexing.py.
 * **Inference :** Uses predict_proba on the QDA object. This takes a total of ~5% of the time.
 * **Misc :** There seems to be a total of about 2-3% time spent on other pandas calls in the final model building. I'm not sure why this doesn't show up in the first round of model building.
+* [Opt] All the models that are being built are independent. Training the models and inference can be completely parallelized.
 
 ## PUBG
 ### Functionality
@@ -26,7 +27,7 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 * **Feature Augmentation:** After reading the CSVs, the algorithm constructs a set of additional features by combining columns in various ways. It roughly has two parts
   * First, a new set of features is constructed by arithmetically combining columns from the input data.
   * Input rows are grouped based on some keys and each group is reduced in different ways (min, max, mean, std etc.). Then the aggregates of each group are appended to each row of the group (using a join).
-  * For each different aggregation, the grouping is being re-run. Also, the join is a major bottleneck. If we were to join the aggregate tables first and then perform a single join with the input table, that would be much faster than repeatedly joining the aggregates with the input data.
+  * [Opt] For each different aggregation, the grouping is being re-run. Also, the join is a major bottleneck. If we were to join the aggregate tables first and then perform a single join with the input table, that would be much faster than repeatedly joining the aggregates with the input data.
 * **Predictive Models:** There is a single predictive model -- a gradient boosted tree ensemble. The single model is trained with all the augmented training data and then used to predict the test inputs.
 ### Profiling
 * **Read Data:** The read + feature generation takes about 9% of the total time. This time is dominated by the joins (~7%).
@@ -43,9 +44,14 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 * **Predictive Models:** The application compares two prediction mechanisms -- 
   * In the first method, the magic features are used. 200 different lightgbm models, one for each input feature magic feature pair, to predict the target value are constructed. The predictions of these models are then combined to get a final prediction. They are combined using logistic regression. 
   * The second method is the same as above except that it only uses the input features and not the magic features.
+ Additionally, for each variable (or variable pair), 5 folds of the training data are constructed. A lightgbm model is trained for each fold and the prediction is computed as the average of these models.
 ### Profiling
-I only profiled the application for model construction and inference for the first 5 features. Therefore, the data read and feature augmentation times should be even more insignificant than what is listed below (it says 5% below, but I would expect something like 0.1% when the whole application is run).
+I only profiled the application for model construction and inference for the first 5 features. Therefore, the data read and feature augmentation times should be even more insignificant than what is listed below (it says a total of ~9% below, but I would expect something like 0.2% when the whole application is run, i.e. the whole of the 200 iterations).
 * **Read Data and Feature Augmentation:** 
-  * Reading and filtering take about 5% of the total time. Reading alone is about 3.5% and the result is almost completely the unique value computation.
-  * 
+  * Reading and filtering take about 5% of the total time. Reading from the disk is about 3.5% and the rest is almost completely the unique value computation.
+  * Feature augmentation is about 3.5% of the total time.
+* **Training:** Training is again the biggest bottleneck taking about 80% of the time. Even though the model used is the same as the one in PUBG, the split of time within the train method is very different. This is possibly because we are training several small models here as opposed to a single large model in PUBG. 
+  * There is a non trivial cost of filtering out only the required columns from the input(or augmented) dataframe. This takes a total of about 4% of the time.
+  * [Opt] All the models that are being built are independent. Training the models and inference can be completely parallelized.
+* **Inference:** Inference takes only ~5% of the time. The logistic regression used to combine the predictions of the various models takes negligible time.
 
