@@ -65,9 +65,9 @@ plotGraphs = False
 scriptPath = os.path.realpath(__file__)
 scriptDirPath = os.path.dirname(scriptPath)
 rootPath = os.path.dirname(scriptDirPath)
-dataDirPath = os.path.join(rootPath, "data\\")
+dataDirPath = os.path.join(rootPath, "data")
 
-test_path = dataDirPath + 'test.csv'
+test_path = os.path.join(dataDirPath, 'test.csv')
 
 train = None
 test = None

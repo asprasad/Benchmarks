@@ -60,7 +60,7 @@ import cProfile
 scriptPath = os.path.realpath(__file__)
 scriptDirPath = os.path.dirname(scriptPath)
 rootPath = os.path.dirname(scriptDirPath)
-dataDirPath = os.path.join(rootPath, "data\\")
+dataDirPath = os.path.join(rootPath, "data")
 
 train = None
 test = None

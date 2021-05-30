@@ -62,24 +62,24 @@ kfolds = KFold(n_splits=5, shuffle=True, random_state=345)
 scriptPath = os.path.realpath(__file__)
 rootPath = os.path.dirname(scriptPath)
 rootPath = os.path.dirname(rootPath)
-basePath = os.path.join(rootPath, "data\\")
+basePath = os.path.join(rootPath, "data")
 
 startYear = 2019
 
 def prepare_competitive(league, events):
     if league == 'women':
-        main_loc = basePath + '\\WDataFiles_Stage2\\'
-        regular_season = main_loc + 'WRegularSeasonDetailedResults.csv'
-        playoff = main_loc + 'WNCAATourneyDetailedResults.csv'
+        main_loc = os.path.join(basePath, 'WDataFiles_Stage2')
+        regular_season = os.path.join(main_loc, 'WRegularSeasonDetailedResults.csv')
+        playoff = os.path.join(main_loc, 'WNCAATourneyDetailedResults.csv')
         rank = None
-        season_info = main_loc + 'WSeasons.csv'
+        season_info = os.path.join(main_loc, 'WSeasons.csv')
     else:
-        main_loc = basePath + '\\MDataFiles_Stage2\\'
-        regular_season = main_loc + 'MRegularSeasonDetailedResults.csv'
-        playoff = main_loc + 'MNCAATourneyDetailedResults.csv'
-        seed = main_loc + 'MNCAATourneySeeds.csv'
-        rank = main_loc + 'MMasseyOrdinals.csv'
-        season_info = main_loc + 'MSeasons.csv'
+        main_loc = os.path.join(basePath, 'MDataFiles_Stage2')
+        regular_season = os.path.join(main_loc, 'MRegularSeasonDetailedResults.csv')
+        playoff = os.path.join(main_loc, 'MNCAATourneyDetailedResults.csv')
+        seed = os.path.join(main_loc, 'MNCAATourneySeeds.csv')
+        rank = os.path.join(main_loc, 'MMasseyOrdinals.csv')
+        season_info = os.path.join(main_loc, 'MSeasons.csv')
         
     reg = pd.read_csv(regular_season)
     reg = process_details(reg, rank)
@@ -128,7 +128,7 @@ def ReadData():
     global events_ext_w
 
     for year in np.arange(startYear, 2021):
-        df = pd.read_csv(basePath + f'\\MPlayByPlay_Stage2\\MEvents{year}.csv')
+        df = pd.read_csv(os.path.join(basePath, 'MPlayByPlay_Stage2', f'MEvents{year}.csv'))
         df = make_scores(df)
         df = quarter_score(df)
         df = lead_changes(df)
@@ -136,7 +136,7 @@ def ReadData():
         df = event_count(df)
         all_events_m.append(df)
         gc.collect()
-        df = pd.read_csv(basePath + f'\\WPlayByPlay_Stage2\\WEvents{year}.csv')
+        df = pd.read_csv(os.path.join(basePath, 'WPlayByPlay_Stage2', f'WEvents{year}.csv'))
         df = make_scores(df)
         df = quarter_score(df, men=False)
         df = lead_changes(df)
@@ -225,8 +225,8 @@ def DoHardCuts():
 all_names = None
 def EDA():
     global all_names
-    names_m = pd.read_csv(basePath + '\\MDataFiles_Stage2\\MTeams.csv')
-    names_w = pd.read_csv(basePath + '\\WDataFiles_Stage2\\WTeams.csv')
+    names_m = pd.read_csv(os.path.join(basePath, 'MDataFiles_Stage2', 'MTeams.csv'))
+    names_w = pd.read_csv(os.path.join(basePath, 'WDataFiles_Stage2', 'WTeams.csv'))
 
     all_names = pd.concat([names_m[['TeamID', 'TeamName']], names_w[['TeamID', 'TeamName']]])
     get_game(all_events_w_plot, all_names, final_score=20, final_smaller=False, use_competitive=True, competitive=False)
@@ -604,5 +604,5 @@ def RunTrainingAndInference():
     ReadData()
     DoTrainingAndCrossValidation()
 
-cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
-#RunTrainingAndInference()
+# cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
+RunTrainingAndInference()

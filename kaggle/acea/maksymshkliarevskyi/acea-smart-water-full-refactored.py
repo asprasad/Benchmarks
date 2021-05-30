@@ -94,7 +94,7 @@ print('Datasets:')
 scriptPath = os.path.realpath(__file__)
 rootPath = os.path.dirname(scriptPath)
 rootPath = os.path.dirname(rootPath)
-basePath = os.path.join(rootPath, "data\\")
+basePath = os.path.join(rootPath, "data")
 os.listdir(basePath)
 
 Aquifer_Doganella = None
@@ -122,15 +122,15 @@ def ReadData():
     global datasets
     global datasets_names
 
-    Aquifer_Doganella = pd.read_csv(basePath + 'Aquifer_Doganella.csv', index_col = 'Date')
-    Aquifer_Auser = pd.read_csv(basePath +'Aquifer_Auser.csv', index_col = 'Date')
-    Water_Spring_Amiata = pd.read_csv(basePath +'Water_Spring_Amiata.csv', index_col = 'Date')
-    Lake_Bilancino = pd.read_csv(basePath +'Lake_Bilancino.csv', index_col = 'Date')
-    Water_Spring_Madonna_di_Canneto = pd.read_csv(basePath +'Water_Spring_Madonna_di_Canneto.csv', index_col = 'Date')
-    Aquifer_Luco = pd.read_csv(basePath +'Aquifer_Luco.csv', index_col = 'Date')
-    Aquifer_Petrignano = pd.read_csv(basePath +'Aquifer_Petrignano.csv', index_col = 'Date')
-    Water_Spring_Lupa = pd.read_csv(basePath +'Water_Spring_Lupa.csv', index_col = 'Date')
-    River_Arno = pd.read_csv(basePath +'River_Arno.csv', index_col = 'Date')
+    Aquifer_Doganella = pd.read_csv(os.path.join(basePath, 'Aquifer_Doganella.csv'), index_col = 'Date')
+    Aquifer_Auser = pd.read_csv(os.path.join(basePath, 'Aquifer_Auser.csv'), index_col = 'Date')
+    Water_Spring_Amiata = pd.read_csv(os.path.join(basePath, 'Water_Spring_Amiata.csv'), index_col = 'Date')
+    Lake_Bilancino = pd.read_csv(os.path.join(basePath, 'Lake_Bilancino.csv'), index_col = 'Date')
+    Water_Spring_Madonna_di_Canneto = pd.read_csv(os.path.join(basePath, 'Water_Spring_Madonna_di_Canneto.csv'), index_col = 'Date')
+    Aquifer_Luco = pd.read_csv(os.path.join(basePath, 'Aquifer_Luco.csv'), index_col = 'Date')
+    Aquifer_Petrignano = pd.read_csv(os.path.join(basePath, 'Aquifer_Petrignano.csv'), index_col = 'Date')
+    Water_Spring_Lupa = pd.read_csv(os.path.join(basePath, 'Water_Spring_Lupa.csv'), index_col = 'Date')
+    River_Arno = pd.read_csv(os.path.join(basePath, 'River_Arno.csv'), index_col = 'Date')
 
     print('Datasets shape:')
     print('*'*30)
