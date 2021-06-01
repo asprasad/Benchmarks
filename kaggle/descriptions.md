@@ -20,6 +20,7 @@ Descriptions of the benchmarks from Kaggle and some analysis of each of them.
 * **Inference :** Uses predict_proba on the QDA object. This takes a total of ~5% of the time.
 * **Misc :** There seems to be a total of about 2-3% time spent on other pandas calls in the final model building. I'm not sure why this doesn't show up in the first round of model building.
 * [Opt] All the models that are being built are independent. Training the models and inference can be completely parallelized.
+* [Opt] Each iteration is filtering the data based on a certain feature value. This is creating a copy of the data and then feature selection is performed on it. We could potentially merge feature selection (the variance thresholding) for all 512 values of the "filtering feature" so that we only walk the data set once to compute the aggregates required to select features. 
 
 ## PUBG
 ### Functionality
@@ -78,4 +79,35 @@ The profiles were collected while running the benchmark only on data from 2020. 
  *  [Opt] It is probably also possible to perform some query rewrite optimization since most of the time is spend in pandas.
 *  **Training and Cross Validation :**
   *  Training takes about 23% of the total time.
-  *  Computing partial dependence plots takes ~17% (this is probably not needed and is part of model evaluation). 
+  *  Computing partial dependence plots takes ~17% (this is probably not needed and is part of model evaluation).
+
+## House Prices
+### Functionality
+This application compares the performance of different models in terms of predicting house prices using various features. Cross validation is used to predict performance.
+* **Read Data and Feature Engineering :**
+  * Reads data from a csv file
+  * Fills in missing values using different techniques like median and mean. 
+  * Transforms some columns using functions like log.
+  * Overall, a negligible amount of time is spent reading data and manipulating it.
+* **Training and Cross Validation :**
+  * Several models are compared in terms of their prediction accuracy. The following are the standalone models that are evaluated.
+   * Lasso
+   * Elastic net
+   * Kernel ridge regression
+   * Sklearn gradient boosting (GradientBoostingRegressor)
+   * XGBoost
+   * LightGBM
+   * Averaging model : Averages the prediction of Elastic net, sklearn gradient boost, kernel ridge regression and lasso
+   * A stacked model : The stacked model uses Elastic net, sklearn gradient boost, kernel ridge regression as the first level predictors and then combines their predictions using a lasso predictor (as opposed to just averaging which was done in the Averaging model)
+   * All these models are evaluated using the sklearn function cross_val_score.
+     * TODO This seems to do some fancy parallelization under the hood. Need to figure out what its doing. (Uses joblib)
+  * Finally, a stacked ensemble model is trained and evaluated (stacked model + XGBoost + lightGBM). The stack model uses Elastic net, sklearn gradient boost, kernel ridge regression as the first level predictors and then combines their predictions using a lasso predictor (as opposed to just averaging which was done in the Averaging model). Additionally, the prediction of the stacked model is linearly combined (using some constant coefficients) with predictions from XGBoost and LightGBM.
+    * This model is only evaluated using a root mean square error on the training data. No cross validation is performed.
+### Profiling
+* Reading data and manipulating features takes negligible time (I can't even find it on the flame graph). 
+* Evaluating the stacked model takes the longest time (about 60% of the time), followed by evaluating the averaged model (~12%), the sklearn gradient boosting model (9.5%), the XGBoost model (4.5%) and LightGBM (0.5%).
+  * Presumably, these times are dominated by training times. But this is not clear from the profile since the callstacks are hidden by the parallel execution inside cross_val_score.
+* Evaluating the stacked ensemble model takes about 13.2% of the time of which a majority is taken by the training (fit). How much exactly is not clear again because of some weirdness in the callstacks.
+  * This takes less time than evaluating the stacked model because here we don't do 5-fold cross validation. All three models (stacked, XGBoost and LightGBM) are trained on the full training set and the RMSE is evaluated.
+* [Opt] Can some cross validation specific optimizations be done for training? Are there things that can be reused across folds?
+* [Opt] Will training all these models together on a specific data set be faster than training them one after the other?  
