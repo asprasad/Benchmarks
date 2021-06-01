@@ -111,3 +111,30 @@ This application compares the performance of different models in terms of predic
   * This takes less time than evaluating the stacked model because here we don't do 5-fold cross validation. All three models (stacked, XGBoost and LightGBM) are trained on the full training set and the RMSE is evaluated.
 * [Opt] Can some cross validation specific optimizations be done for training? Are there things that can be reused across folds?
 * [Opt] Will training all these models together on a specific data set be faster than training them one after the other?  
+
+## Titanic
+### Functionality
+This application compares various models for the titanic dataset and finally builds a voting classifier to make predictions. The aim is to predict whether a given person survived the titanic disaster given various features describing the person (age, sex, ticket class etc.).
+* **Read Data and Feature Engineering: **
+  * Reads data from training and test CSV files into pandas dataframes. 
+  * Fills in missing values for various features.
+  * Transforms some features and generates a few new ones (like family size).
+  * Does one hot encoding on some categorical features.
+  * Again, the time spent in this part of the application is negligible.
+* **Modeling and Cross Validation: **
+  * The application evaluates several models on the titanic dataset. It uses cross_val_score and 10-fold cross validation to evaluate these models. 
+    * SVC
+    * Decision Tree
+    * AdaBoost 
+    * Random Forest
+    * Extra Trees
+    * Gradient Boosting
+    * Multiple layer perceprton (neural network)
+    * KNN
+    * Logistic regression
+    * Linear Discriminant Analysis
+   * The best models from these are picked and a hyperparameter search is performed on them. This uses GridSearchCV and 10-fold CV.
+     * Again, there is some parallel execution within the grid search and this confuses the profiler. Its not obvious what the bottlenecks within these calls are.
+     * The best models are AdaBoost, RandomForest, ExtraTrees and GradientBoosting
+   * The configurations of the 4 best models above are combined in a voting classifier. This is again trained on the whole training dataset.
+ 
