@@ -115,13 +115,13 @@ This application compares the performance of different models in terms of predic
 ## Titanic
 ### Functionality
 This application compares various models for the titanic dataset and finally builds a voting classifier to make predictions. The aim is to predict whether a given person survived the titanic disaster given various features describing the person (age, sex, ticket class etc.).
-* **Read Data and Feature Engineering: **
+* **Read Data and Feature Engineering :**
   * Reads data from training and test CSV files into pandas dataframes. 
   * Fills in missing values for various features.
   * Transforms some features and generates a few new ones (like family size).
   * Does one hot encoding on some categorical features.
   * Again, the time spent in this part of the application is negligible.
-* **Modeling and Cross Validation: **
+* **Modeling and Cross Validation :**
   * The application evaluates several models on the titanic dataset. It uses cross_val_score and 10-fold cross validation to evaluate these models. 
     * SVC
     * Decision Tree
@@ -135,6 +135,16 @@ This application compares various models for the titanic dataset and finally bui
     * Linear Discriminant Analysis
    * The best models from these are picked and a hyperparameter search is performed on them. This uses GridSearchCV and 10-fold CV.
      * Again, there is some parallel execution within the grid search and this confuses the profiler. Its not obvious what the bottlenecks within these calls are.
-     * The best models are AdaBoost, RandomForest, ExtraTrees and GradientBoosting
-   * The configurations of the 4 best models above are combined in a voting classifier. This is again trained on the whole training dataset.
- 
+     * The best models are AdaBoost, RandomForest, ExtraTrees, GradientBoosting and SVC
+   * The configurations of the 5 best models above are combined in a voting classifier. This is again trained on the whole training dataset.
+ ### Profiling
+  * Reading data and engineering features takes negligible time. 
+  * The hyperparameter search on the 5 models chosen for the voting classifier take a majority of the time (~94% of the total time)
+    * Evaluate random forest (~30%)
+    * Evaluate extra trees classifier (~28%)
+    * Evaluate gradient boosting (~17.5%)
+    * Evaluate SVC (~16%)
+    * Evaluate ADA boost (2.5%)
+  * The details of what is happening inside GridSearchCV are not clear from the profiler results, but it would seem like training is the bottleneck. 
+  * Evaluating the first set of models takes ~4% of the time (the 10 fold CV that is performed to select the 5 best models)
+  * Training the final voting classifier and predicting the test set using this classifier takes negligible time (~0.2%).   
