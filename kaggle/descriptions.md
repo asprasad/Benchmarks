@@ -73,10 +73,10 @@ The aim of this program is to construct a model to predict the competitiveness o
 ### Profiling ([Visualization](https://github.com/asprasad/Benchmarks/blob/main/kaggle/march-madness/lucabasa/quantify-the-madness-a-study-of-competitiveness.py.svg))
 The profiles were collected while running the benchmark only on data from 2020. The actual dataset has data from 2015-2020. But I expect that adding more data will scale all parts of this application uniformly.
 * **Read Data and Feature Engineering :** This takes about 60% of the total time.
- *  prepare_competitive (computation of the rolling stats), lead_changes, make_scores, event_count account for almost all the time spent reading data and constructing features. Bottlenecks of each are listed above.
- *  [Opt] The feature construction for each input csv (there are 100s) is done separately and then all the tables are concatenated. Each can be processed in parallel. Additionally, pipeline parallelism for computation of various features is also possible between different input files. Data-parallelism also exists within the operators.
- *  [Opt] Specifically for the reduction over 30 day intervals, these reductions can be parallelized over different windows and the different aggregations combined (rather than going over the data multiple times).
- *  [Opt] It is probably also possible to perform some query rewrite optimization since most of the time is spend in pandas.
+  *  prepare_competitive (computation of the rolling stats), lead_changes, make_scores, event_count account for almost all the time spent reading data and constructing features. Bottlenecks of each are listed above.
+  *  [Opt] The feature construction for each input csv (there are 100s) is done separately and then all the tables are concatenated. Each can be processed in parallel. Additionally, pipeline parallelism for computation of various features is also possible between different input files. Data-parallelism also exists within the operators.
+  *  [Opt] Specifically for the reduction over 30 day intervals, these reductions can be parallelized over different windows and the different aggregations combined (rather than going over the data multiple times).
+  *  [Opt] It is probably also possible to perform some query rewrite optimization since most of the time is spend in pandas.
 *  **Training and Cross Validation :**
   *  Training takes about 23% of the total time.
   *  Computing partial dependence plots takes ~17% (this is probably not needed and is part of model evaluation).
