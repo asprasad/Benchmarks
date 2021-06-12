@@ -49,7 +49,9 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import sparse
 import seaborn as sns
+import cProfile
 # get_ipython().run_line_magic('matplotlib', 'inline')
 
 from collections import Counter
@@ -62,6 +64,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score, StratifiedKFold, learning_curve
+from inference_helpers import EngineerFeaturesForInference, ReadTestData
 
 sns.set(style='white', context='notebook', palette='deep')
 
@@ -186,7 +189,28 @@ def ProcessData():
     # Summarie and statistics
     # train.describe()
 
+usePandasForDummyEncode = False
 
+def DummyEncodeColumn(dataset, columnName):
+    if usePandasForDummyEncode == True:
+        return pd.get_dummies(dataset, columns=[columnName]), None
+
+    from sklearn.preprocessing import OneHotEncoder
+    ohe = OneHotEncoder(sparse=False)
+    colArray = dataset[columnName].values.reshape(-1, 1)
+    ohe.fit(colArray)
+    encodedColumns = ohe.transform(colArray)
+    encodedColumnsDF = pd.DataFrame(encodedColumns, index=dataset.index)
+    dataset.drop(columns = columnName, inplace=True)
+    return (pd.concat([dataset, encodedColumnsDF], axis=1), ohe)
+
+ticketEncoder = None
+embarkedEncoder = None
+cabinEncoder = None
+PclassEncoder = None
+titleEncoder = None 
+age_med = 0
+age_pred = dict()
 # ## 3. Feature analysis
 # ### 3.1 Numerical values
 
@@ -370,12 +394,12 @@ def FeatureAnalysis():
     ## Fill Age with the median age of similar rows according to Pclass, Parch and SibSp
     # Index of NaN age rows
     index_NaN_age = list(dataset["Age"][dataset["Age"].isnull()].index)
-
+    global age_med, age_pred
     for i in index_NaN_age :
         age_med = dataset["Age"].median()
-        age_pred = dataset["Age"][((dataset['SibSp'] == dataset.iloc[i]["SibSp"]) & (dataset['Parch'] == dataset.iloc[i]["Parch"]) & (dataset['Pclass'] == dataset.iloc[i]["Pclass"]))].median()
-        if not np.isnan(age_pred) :
-            dataset['Age'].iloc[i] = age_pred
+        age_pred[i - train_len] = dataset["Age"][((dataset['SibSp'] == dataset.iloc[i]["SibSp"]) & (dataset['Parch'] == dataset.iloc[i]["Parch"]) & (dataset['Pclass'] == dataset.iloc[i]["Pclass"]))].median()
+        if not np.isnan(age_pred[i - train_len]) :
+            dataset['Age'].iloc[i] = age_pred[i - train_len]
         else :
             dataset['Age'].iloc[i] = age_med
 
@@ -459,8 +483,13 @@ def FeatureAnalysis():
 
     # Factorplots of family size categories show that Small and Medium families have more chance to survive than single passenger and large families.
     # convert to indicator values Title and Embarked 
-    dataset = pd.get_dummies(dataset, columns = ["Title"])
-    dataset = pd.get_dummies(dataset, columns = ["Embarked"], prefix="Em")
+    
+    # dataset = pd.get_dummies(dataset, columns = ["Title"])
+    global titleEncoder
+    dataset, titleEncoder = DummyEncodeColumn(dataset, "Title")
+    # dataset = pd.get_dummies(dataset, columns = ["Embarked"], prefix="Em")
+    global embarkedEncoder
+    dataset, embarkedEncoder = DummyEncodeColumn(dataset, "Embarked")
 
     ## dataset.head()
 
@@ -490,7 +519,9 @@ def FeatureAnalysis():
     # But we can see that passengers with a cabin have generally more chance to survive than passengers without (X).
     # 
     # It is particularly true for cabin B, C, D, E and F.
-    dataset = pd.get_dummies(dataset, columns = ["Cabin"],prefix="Cabin")
+    # dataset = pd.get_dummies(dataset, columns = ["Cabin"],prefix="Cabin")
+    global cabinEncoder
+    dataset, cabinEncoder = DummyEncodeColumn(dataset, "Cabin")
 
     # ### 5.4 Ticket
     ## dataset["Ticket"].head()
@@ -512,10 +543,14 @@ def FeatureAnalysis():
     dataset["Ticket"] = Ticket
     ## dataset["Ticket"].head()
 
-    dataset = pd.get_dummies(dataset, columns = ["Ticket"], prefix="T")
+    # dataset = pd.get_dummies(dataset, columns = ["Ticket"], prefix="T")
+    global ticketEncoder
+    dataset, ticketEncoder = DummyEncodeColumn(dataset, "Ticket")
     # Create categorical values for Pclass
-    dataset["Pclass"] = dataset["Pclass"].astype("category")
-    dataset = pd.get_dummies(dataset, columns = ["Pclass"],prefix="Pc")
+    # dataset["Pclass"] = dataset["Pclass"].astype("category")
+    # dataset = pd.get_dummies(dataset, columns = ["Pclass"],prefix="Pc")
+    global PclassEncoder
+    dataset, PclassEncoder = DummyEncodeColumn(dataset, "Pclass")
 
     # Drop useless variables 
     dataset.drop(labels = ["PassengerId"], axis = 1, inplace = True)
@@ -796,9 +831,10 @@ def PlotLearningCurves():
 # - Fsize, LargeF, MedF, Single refer to the size of the passenger family.
 # 
 # **According to the feature importance of this 4 classifiers, the prediction of the survival seems to be more associated with the Age, the Sex, the family size and the social standing of the passengers more than the location in the boat.**
-
+test_Survived = None
+votingC = None
 def EvaluateVotingClassifier():
-    global IDTest, X_train, Y_train
+    global IDTest, X_train, Y_train, votingC
     IDTest_local = IDTest
     
     if plotGraphs:
@@ -824,8 +860,25 @@ def EvaluateVotingClassifier():
     votingC = votingC.fit(X_train, Y_train)
     # ### 6.3 Prediction
     # #### 6.3.1 Predict and Submit results
+    global test_Survived
     test_Survived = pd.Series(votingC.predict(test), name="Survived")
     results = test_Survived #pd.concat([IDtest, test_Survived],axis=1)
+    results.to_csv(os.path.join(scriptDirPath, "ensemble_python_voting.csv"),index=False)
+
+def VotingClassifierInference(testData):
+    global votingC, test
+    # IDTest_local = IDTest
+    
+    # ### 6.3 Prediction
+    # #### 6.3.1 Predict and Submit results
+    test_prediction = pd.Series(votingC.predict(testData), name="Survived")
+    results = test_prediction #pd.concat([IDtest, test_Survived],axis=1)
+    # print ("Test shape (original): ", test.shape)
+    # print ("Test data shape (computed for inference) : ", testData.shape)
+    # colsEqual = (test.reset_index(drop=True) == testData.reset_index(drop=True)).all()
+    # for c in colsEqual:
+    #     print(c)
+    # print("Predictions equal : ", (test_Survived == test_prediction).all())
     results.to_csv(os.path.join(scriptDirPath, "ensemble_python_voting.csv"),index=False)
 
 def RunEvaluations():
@@ -841,6 +894,22 @@ def RunEvaluations():
     EvaluateSVC()
     EvaluateVotingClassifier()
 
+# TODO This assumes that we've run all the Evaluations before. Also, we're reading the whole of the test and train data and
+# manipaulting the whole DF. Separating out the one-hot encoding is complicated and needs to be done. For now, this is just 
+# to get some rough idea of the relative costs. 
+def RunInferenceOnly():
+    # ReadData()
+    # ProcessData()
+    testData, testID = ReadTestData(os.path.join(dataDirPath, 'test.csv'))
+    testData = EngineerFeaturesForInference(testData, ticketEncoder, embarkedEncoder, cabinEncoder, PclassEncoder, titleEncoder, age_med, age_pred)
+    # InitTrainingData()
+    VotingClassifierInference(testData)
+
 # If you found this notebook helpful or you just liked it , some upvotes would be very much appreciated - That will keep me motivated :)
 
 RunEvaluations()
+profileInference = True
+if profileInference == True:
+    cProfile.run("RunInferenceOnly()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
+else:
+    RunInferenceOnly()
