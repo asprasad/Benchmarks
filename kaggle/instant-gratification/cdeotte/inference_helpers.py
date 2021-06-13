@@ -52,5 +52,8 @@ def PredictTestDataSampleWise(testDF, models, featureSelectors, cols):
         for clf in classifiers:
             preds[index] += clf.predict_proba(test3)[:,1] / len(classifiers)
         
+        if index%1000 == 0:
+            print("Elementwise inference progress -- iteration ", index, "/", len(testDF.index))
+        
     return preds
 
