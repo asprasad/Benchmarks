@@ -54,13 +54,16 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.metrics import roc_auc_score
-
+from inference_helpers import PredictTestData, PredictTestDataSampleWise
 import cProfile
+import joblib
 
 scriptPath = os.path.realpath(__file__)
 scriptDirPath = os.path.dirname(scriptPath)
 rootPath = os.path.dirname(scriptDirPath)
 dataDirPath = os.path.join(rootPath, "data")
+modelsPklFile = os.path.join(scriptDirPath, "models.pkl")
+featureSelectorsPklFile = os.path.join(scriptDirPath, "featureSelectors.pkl")
 
 train = None
 test = None
@@ -72,6 +75,13 @@ def ReadData():
     test = pd.read_csv(os.path.join(dataDirPath, 'test.csv'))
     cols = [c for c in train.columns if c not in ['id', 'target']]
     cols.remove('wheezy-copper-turtle-magic')
+
+def ReadTestData():
+    global cols
+    testDF = pd.read_csv(os.path.join(dataDirPath, 'test.csv'))
+    cols = [c for c in testDF.columns if c not in ['id', 'target']]
+    cols.remove('wheezy-copper-turtle-magic')
+    return testDF
 
 # # Step 1 and 2 - Build first QDA model and predict test
 
@@ -122,9 +132,15 @@ def BuildFirstModel():
     # INITIALIZE VARIABLES
     test['target'] = preds
 
+# Maps a value of wheezy-copper-turtle-magic (0 ... 511) to a feature selector.
+featureSelectors = dict()
+# Maps a value of wheezy-copper-turtle-magic (0 ... 511) to a list of predictors.
+models = dict() 
+
 # # Step 3 & 4 - Add pseudo label data and build second model 
 def BuildFinalModel():
     global train, test, cols
+    global featureSelectors, models
     oof = np.zeros(len(train))
     preds = np.zeros(len(test))
 
@@ -152,8 +168,11 @@ def BuildFinalModel():
         test3 = None
         if (validTestData == True):
             test3 = sel.transform(test2[cols])
-            
+        
+        featureSelectors[k] = sel
+        
         # STRATIFIED K FOLD
+        models[k] = []
         skf = StratifiedKFold(n_splits=11, random_state=42, shuffle=True)
         for train_index, test_index in skf.split(train3p, train2p['target']):
             test_index3 = test_index[ test_index<len(train3) ] # ignore pseudo in oof
@@ -164,6 +183,7 @@ def BuildFinalModel():
             oof[idx1[test_index3]] = clf.predict_proba(train3[test_index3,:])[:,1]
             if (validTestData == True):
                 preds[test2.index] += clf.predict_proba(test3)[:,1] / skf.n_splits
+            models[k].append(clf)
         
         #if k%64==0: print(k)
             
@@ -188,10 +208,42 @@ def BuildFinalModel():
 # 
 # When you run your kernel locally, it will only pseudo label the public test data (because that is all that `test.csv` contains). When you submit this solution to Kaggle, your submission will load the full `test.csv` and pseudo label both the public and private test data set. Thus you will approximately double your amount of training data for your submissions!
 
+def RunInference():
+    testDF = ReadTestData()
+    preds = PredictTestData(testDF, models, featureSelectors, cols)
+    # # Submit Predictions
+    sub = pd.read_csv(os.path.join(dataDirPath,'sample_submission.csv'))
+    sub['target'] = preds
+    sub.to_csv(os.path.join(scriptDirPath, 'submission.csv'),index=False)
+
+def RunInferenceSampleWise():
+    testDF = ReadTestData()
+    preds = PredictTestDataSampleWise(testDF, models, featureSelectors, cols)
+    # # Submit Predictions
+    sub = pd.read_csv(os.path.join(dataDirPath,'sample_submission.csv'))
+    sub['target'] = preds
+    sub.to_csv(os.path.join(scriptDirPath, 'submission.csv'),index=False)
+
 def RunTrainingAndInference():
     ReadData()
     BuildFirstModel()
     BuildFinalModel()
+    joblib.dump(models, modelsPklFile)
+    joblib.dump(featureSelectors, featureSelectorsPklFile)
 
-#RunTrainingAndInference()
-cProfile.run("RunTrainingAndInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
+runTraining = True
+profileInference = True
+if runTraining:
+    RunTrainingAndInference()
+else:
+    models = joblib.load(modelsPklFile)
+    featureSelectors = joblib.load(featureSelectorsPklFile)
+
+input("Starting inference ... Press enter to continue")
+if profileInference:
+    cProfile.run("RunInference()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".prof"))
+    cProfile.run("RunInferenceSampleWise()", filename=os.path.join(os.path.dirname(scriptPath), os.path.basename(__file__) + ".elemwise.prof"))
+else:
+    RunInference()
+    RunInferenceSampleWise()
+input("Finished inference ... Press enter to exit")
