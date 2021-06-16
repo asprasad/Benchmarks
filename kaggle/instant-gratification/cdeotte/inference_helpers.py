@@ -20,8 +20,6 @@ def PredictTestData(testDF, models, featureSelectors, cols):
         if (validTestData == True):
             test3 = sel.transform(test2[cols])
         
-        featureSelectors[k] = sel
-        
         # STRATIFIED K FOLD
         classifiers = models[k]
         for clf in classifiers:
@@ -44,8 +42,6 @@ def PredictTestDataSampleWise(testDF, models, featureSelectors, cols):
         sel = featureSelectors[k]
         testVec = testDF.loc[index][cols].values.reshape(1, -1)
         test3 = sel.transform(testVec)
-        
-        featureSelectors[k] = sel
         
         # STRATIFIED K FOLD
         classifiers = models[k]
