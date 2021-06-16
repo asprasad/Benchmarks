@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# Source : https://www.kaggle.com/ilialar/w5-solution-2
+
 # Quite messy notebook using mix of several lightgmb models predictions.
 
 # This Python 3 environment comes with many helpful analytics libraries installed
