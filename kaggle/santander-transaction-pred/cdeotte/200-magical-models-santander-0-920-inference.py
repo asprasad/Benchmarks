@@ -76,6 +76,7 @@ synthetic_samples_indexes = None
 
 models = dict()
 logisticRegressionModel = None
+num_vars = 200
 
 def ReadData():
     global test, train
@@ -153,7 +154,7 @@ def DoTrainingAndInference():
         'verbosity': -10}
     train2 = train.sample(frac=1,random_state=42)
     evals_result = {}
-    num_vars = 5
+    global num_vars
 
     # SAVE OUT-OF-FOLD PREDICTIONS
     all_oof = np.zeros((len(train2),num_vars+1))
@@ -247,9 +248,9 @@ def RunInference():
 
     test = ReadTestData(os.path.join(dataDirPath, 'test.csv'))
     AddMagicFeaturesToTest(test, frequencyEncodeMap)
-    DoInference(test, models, logisticRegressionModel, 5, dataDirPath)
+    DoInference(test, models, logisticRegressionModel, num_vars, dataDirPath)
 
-runTraining = False
+runTraining = True
 if runTraining:
     RunTrainingAndInference()
 
