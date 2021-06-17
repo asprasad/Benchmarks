@@ -650,8 +650,8 @@ def TrainModels():
         os.path.join(dataDirPath, 'train.csv'), #'/kaggle/input/riiid-test-answer-prediction/train.csv',
         usecols = used_data_types_dict.keys(),
         dtype=used_data_types_dict, 
-        index_col = 0,
-        nrows=10**7
+        index_col = 0 #,
+        # nrows=10**7
     )
 
     features_df = train_df.iloc[:int(9/10 * len(train_df))]
@@ -847,7 +847,7 @@ def TrainModels():
 #     env.predict(test_df.loc[test_df['content_type_id'] == 0, ['row_id', 'answered_correctly']])
 
 def RunInference(rfe, model, user_answers_df, content_answers_df):
-    numberOfRows = 10**5
+    numberOfRows = 10**7
     test_df_full = pd.read_csv(
         os.path.join(dataDirPath, 'train.csv'), #'/kaggle/input/riiid-test-answer-prediction/train.csv',
         usecols = used_data_types_dict.keys(),
